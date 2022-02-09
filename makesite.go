@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"html/template"
 	"os"
+	"flag"
 )
 
 // Page holds all the information we need to generate a new
@@ -17,10 +18,9 @@ type Page struct {
 }
 
 func main() {
-	filePath := "first-post.txt"
-
-	fileContents, err := ioutil.ReadFile(filePath)
-
+	filePath := flag.String("file", "first-post.txt", "The name of the file to generate HTML of, including file extension.")
+	flag.Parse()
+	fileContents, err := ioutil.ReadFile(*filePath)
 
 	if err != nil {
 		// A common use of `panic` is to abort if a function returns an error
@@ -29,12 +29,14 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(string(fileContents))
+	fileName := string(*filePath)[:len(*filePath) - 4]
+
+	fmt.Println(string(fileContents), fileName)
 
 	page := Page{
-		TextFilePath: filePath,
-		TextFileName: "first-post",
-		HTMLPagePath: "first-post.html",
+		TextFilePath: *filePath,
+		TextFileName: fileName,
+		HTMLPagePath: fileName + ".html",
 		Content:      string(fileContents),
 	}
 
