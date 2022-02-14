@@ -1,11 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"html/template"
 	"os"
 	"flag"
+	"strings"
+	"github.com/gomarkdown/markdown"
+  "github.com/gomarkdown/markdown/parser"
 )
 
 // Page holds all the information we need to generate a new
@@ -14,11 +16,11 @@ type Page struct {
 	TextFilePath string
 	TextFileName string
 	HTMLPagePath string
-	Content      string
+	Content      interface{}
 }
 
 func main() {
-	dir := flag.String("dir", ".", "The directory from which to parse all txt files")
+	dir := flag.String("dir", "./posts", "The directory from which to parse all txt files")
 	//filePath := flag.String("file", "first-post.txt", "The name of the file to generate HTML of, including file extension.")
 	flag.Parse()
 
@@ -41,23 +43,39 @@ func main() {
 	}
 
 	for _, file := range files {
-		fmt.Println(file.Name())
-	
 		// fileName := string(*filePath)[:len(*filePath) - 4]
 		filePath := file.Name()
-		fileName := filePath[:len(filePath) - 4]
-		fileExtension := filePath[len(filePath) - 4:]
+		dotIndex := strings.Index(filePath, ".")
+		fileName := filePath[:dotIndex]
+		fileExtension := filePath[dotIndex:]
 
-		if fileExtension == ".txt" {
-			fileContents, err := ioutil.ReadFile(filePath)
+		if fileExtension == ".txt" || fileExtension == ".md" {
+			var page Page
+			contents, err := ioutil.ReadFile(*dir + "/" + filePath)
 
-			fmt.Println(string(fileContents), fileName)
+			if fileExtension == ".txt" {
+				fileContents := string(contents)
+				page = Page{
+					TextFilePath: filePath,
+					TextFileName: fileName,
+					HTMLPagePath: fileName + ".html",
+					Content:      fileContents,
+				}
+			} else if fileExtension == ".md" {
+				extensions := parser.CommonExtensions | parser.AutoHeadingIDs
+				parser := parser.NewWithExtensions(extensions)
+	
+				md := []byte(contents)
+				html := markdown.ToHTML(md, parser, nil)
+	
+				fileContents := template.HTML(string(html))
 
-			page := Page{
-				TextFilePath: filePath,
-				TextFileName: fileName,
-				HTMLPagePath: fileName + ".html",
-				Content:      string(fileContents),
+				page = Page{
+					TextFilePath: filePath,
+					TextFileName: fileName,
+					HTMLPagePath: fileName + ".html",
+					Content:      fileContents,
+				}
 			}
 
 			// Create a new template in memory named "template.tmpl".
@@ -77,5 +95,7 @@ func main() {
 			// saved inside the new file we created earlier.
 			t.Execute(newFile, page)
 		}
+
+		
 	}
 }
